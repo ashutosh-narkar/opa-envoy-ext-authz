@@ -7,19 +7,6 @@ default allow = false
 
 # allow access to Web service from the subnet 172.28.0.0/16
 allow {
-    http_request.path == "/hello"
-    net.cidr_contains("172.28.0.0/16", source_address.Address.SocketAddress.address)
-}
-
-# allow access to Web service from the subnet 172.28.0.0/16
-allow {
-    http_request.path == "/the/good/path"
-    net.cidr_contains("172.28.0.0/16", source_address.Address.SocketAddress.address)
-}
-
-# allow access to Web service from the subnet 172.28.0.0/16
-allow {
-    http_request.path == "/the/bad/path"
     net.cidr_contains("172.28.0.0/16", source_address.Address.SocketAddress.address)
 }
 

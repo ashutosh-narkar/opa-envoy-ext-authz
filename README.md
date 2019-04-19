@@ -15,6 +15,9 @@ The `front-envoy` receives all inbound requests from `api-server-1` and `api-ser
 - Envoy is listening for ingress on port 80 in each container.
 - `api-server-1` and `api-server-2` are flask apps running on port `5000` and `5001` respectively and forward requests to `front envoy`.
 - `api-server-1` has a static IP in the `172.28.0.0/16` subnet while `api-server-2` has one in the `192.28.0.0/16` subnet.
+- OPA is extended with a GRPC server that implements the [Envoy External authorization API](https://www.envoyproxy.io/docs/envoy/v1.10.0/intro/arch_overview/ext_authz_filter.html). The GRPC server listens by default on port `9191`.
+- `data.envoy.authz.allow` is the default OPA policy that decides whether a request is allowed or not.
+- Both the GRPC server port and default OPA policy that is queried are configurable. See [config.yaml](./config/config.yaml)
 
 ![arch](./arch.png)
 
@@ -122,19 +125,6 @@ default allow = false
 
 # allow access to Web service from the subnet 172.28.0.0/16
 allow {
-    http_request.path == "/hello"
-    net.cidr_contains("172.28.0.0/16", source_address.Address.SocketAddress.address)
-}
-
-# allow access to Web service from the subnet 172.28.0.0/16
-allow {
-    http_request.path == "/the/good/path"
-    net.cidr_contains("172.28.0.0/16", source_address.Address.SocketAddress.address)
-}
-
-# allow access to Web service from the subnet 172.28.0.0/16
-allow {
-    http_request.path == "/the/bad/path"
     net.cidr_contains("172.28.0.0/16", source_address.Address.SocketAddress.address)
 }
 
