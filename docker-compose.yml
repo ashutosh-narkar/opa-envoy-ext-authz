@@ -1,0 +1,122 @@
+version: '2'
+services:
+
+  front-envoy:
+    build:
+      context: .
+      dockerfile: Dockerfile-frontenvoy
+    volumes:
+      - ./front-envoy.yaml:/etc/front-envoy.yaml
+    networks:
+      static-network-1:
+        ipv4_address: 172.28.1.2
+      static-network-2:
+        ipv4_address: 192.28.1.2
+      envoymesh:
+        aliases:
+          - front-envoy
+    expose:
+      - "80"
+      - "8001"
+    ports:
+      - "8000:80"
+      - "8001:8001"
+
+  web-service:
+    build:
+      context: .
+      dockerfile: Dockerfile-service
+    volumes:
+      - ./web-service-envoy.yaml:/etc/service-envoy.yaml
+    networks:
+      envoymesh:
+        aliases:
+          - web-service
+    environment:
+      - SERVICE_NAME=WEB
+    expose:
+      - "80"
+
+  backend-service:
+    build:
+      context: .
+      dockerfile: Dockerfile-service
+    volumes:
+      - ./service-envoy.yaml:/etc/service-envoy.yaml
+    networks:
+      envoymesh:
+        aliases:
+          - backend-service
+    environment:
+      - SERVICE_NAME=BACKEND
+    expose:
+      - "80"
+  db-service:
+    build:
+      context: .
+      dockerfile: Dockerfile-service
+    volumes:
+      - ./service-envoy.yaml:/etc/service-envoy.yaml
+    networks:
+      envoymesh:
+        aliases:
+          - db-service
+    environment:
+      - SERVICE_NAME=DB
+    expose:
+      - "80"
+  opa:
+    image: openpolicyagent/opa:0.10.7-envoy
+    volumes:
+    - ./policies:/policies
+    - ./config:/config
+    command:
+    - --plugin-dir=.
+    - run
+    - --server
+    - --log-level=debug
+    - --config-file=/config/config.yaml
+    - /policies/policy.rego
+    networks:
+      envoymesh:
+        aliases:
+          - opa
+    expose:
+    - "9191"
+    ports:
+    - "9191:9191"
+  api-server-1:
+    build:
+      context: .
+      dockerfile: Dockerfile-api-server
+    networks:
+      static-network-1:
+          ipv4_address: 172.28.1.1
+    expose:
+    - "5000"
+    ports:
+    - "5000:5000"
+  api-server-2:
+    build:
+      context: .
+      dockerfile: Dockerfile-api-server
+    networks:
+      static-network-2:
+          ipv4_address: 192.28.1.1
+    expose:
+    - "5001"
+    ports:
+    - "5001:5000"
+
+networks:
+  envoymesh: {}
+  static-network-1:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+  static-network-2:
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.28.0.0/16
