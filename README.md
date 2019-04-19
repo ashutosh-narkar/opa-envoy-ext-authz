@@ -14,7 +14,8 @@ The example consists of a `front envoy` and a few flask services(`web`, `backend
 
 The `front-envoy` receives all inbound requests from `api-server-1` and `api-server-2` which are deployed in different subnets. The `front-envoy` then forwards requests to the `web` service which calls the `backend` service. The `backend` service calls the `db` service.
 
-Envoy is listening for ingress on port 80 in each container.
+- Envoy is listening for ingress on port 80 in each container.
+- `api-server-1` and `api-server-2` are flask apps running on port `5000` and `5001` respectively and forward requests to `front envoy`.
 
 ![arch](./arch.png)
 
@@ -41,7 +42,11 @@ opa-envoy-ext-authz_opa_1               ./opa_istio_linux_amd64 -- ...   Up     
 opa-envoy-ext-authz_web-service_1       /bin/sh -c /usr/local/bin/ ...   Up      10000/tcp, 80/tcp
 ```
 
-### Step 3: Test Ingress Policy
+### Step 3: Exercise Ingress Policy
+
+The `Ingress Policy` states that the `web` service can **ONLY** be accessed from the subnet `172.28.0.0/16`.
+
+Check that `api-server-1` can access the `web` service.
 
 ```bash
 $ curl -i localhost:5000/hello
@@ -55,6 +60,8 @@ Date: Fri, 19 Apr 2019 09:44:46 GMT
 Hello from the WEB service !
 ```
 
+Check that `api-server-2` **cannot** access the `web` service.
+
 ```bash
 $ curl -i localhost:5001/hello
 
@@ -67,7 +74,11 @@ Date: Fri, 19 Apr 2019 09:45:19 GMT
 Access to the Web service is forbidden.
 ```
 
-### Step 4: Test Service-To-Service Policy
+### Step 4: Exercise Service-To-Service Policy
+
+The `Service-To-Service Policy` policy states that a request can flow from the `web` to `backend` to `db` service.
+
+Check that this flow is honored.
 
 ```bash
 $ curl -i localhost:5000/the/good/path
@@ -80,6 +91,8 @@ Date: Fri, 19 Apr 2019 09:48:29 GMT
 
 Allowed path: WEB -> BACKEND -> DB
 ```
+
+Check that the `web` service is NOT allowed to directly call the `db` service.
 
 ```bash
 $ curl -i localhost:5000/the/bad/path
