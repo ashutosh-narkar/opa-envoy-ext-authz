@@ -1,6 +1,4 @@
-# WIP: opa-envoy-ext-authz
-
-This document is a WIP.
+# opa-envoy-ext-authz
 
 OPA-Envoy(v1.10.0) External Authorization Example.
 
@@ -16,6 +14,7 @@ The `front-envoy` receives all inbound requests from `api-server-1` and `api-ser
 
 - Envoy is listening for ingress on port 80 in each container.
 - `api-server-1` and `api-server-2` are flask apps running on port `5000` and `5001` respectively and forward requests to `front envoy`.
+- `api-server-1` has a static IP in the `172.28.0.0/16` subnet while `api-server-2` has one in the `192.28.0.0/16` subnet.
 
 ![arch](./arch.png)
 
@@ -104,4 +103,55 @@ Server: Werkzeug/0.15.2 Python/2.7.15
 Date: Fri, 19 Apr 2019 09:48:46 GMT
 
 Forbidden path: WEB -> DB
+```
+
+## Example Policy
+
+The following OPA policy is used in the [Example](#Example) section above.
+
+- `web` service can **ONLY** be accessed from the subnet `172.28.0.0/16`
+- a request can flow from the `web` to `backend` to `db` service
+
+```ruby
+package envoy.authz
+
+import input.attributes.request.http as http_request
+import input.attributes.source.address as source_address
+
+default allow = false
+
+# allow access to Web service from the subnet 172.28.0.0/16
+allow {
+    http_request.path == "/hello"
+    net.cidr_contains("172.28.0.0/16", source_address.Address.SocketAddress.address)
+}
+
+# allow access to Web service from the subnet 172.28.0.0/16
+allow {
+    http_request.path == "/the/good/path"
+    net.cidr_contains("172.28.0.0/16", source_address.Address.SocketAddress.address)
+}
+
+# allow access to Web service from the subnet 172.28.0.0/16
+allow {
+    http_request.path == "/the/bad/path"
+    net.cidr_contains("172.28.0.0/16", source_address.Address.SocketAddress.address)
+}
+
+# allow Web service to access Backend service
+allow {
+    http_request.path == "/good"
+    svc_name == "web"
+}
+
+# allow Backend service to access DB service
+allow {
+    http_request.path == "/good/db"
+    svc_name == "backend"
+}
+
+svc_name = parsed {
+    [_, encoded] := split(http_request.headers.authorization, " ")
+    [parsed, _] := split(base64url.decode(encoded), ":")
+}
 ```
