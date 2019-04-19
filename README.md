@@ -10,7 +10,13 @@ Example of using Envoy's [External authorization filter](https://www.envoyproxy.
 
 ## Example
 
-WIP
+The example consists of a `front envoy` and a few flask services(`web`, `backend` and `db`) colocated with a running service Envoy. `front-envoy`, `backend` and `db` use the external authorization filter to call OPA for checking if an incoming request is allowed or not.
+
+The `front-envoy` receives all inbound requests from `api-server-1` and `api-server-2` which are deployed in different subnets. The `front-envoy` then forwards requests to the `web` service which calls the `backend` service. The `backend` service calls the `db` service.
+
+Envoy is listening for ingress on port 80 in each container.
+
+![arch](./arch.png)
 
 ## Running the Example
 
